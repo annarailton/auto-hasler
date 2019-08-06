@@ -1,6 +1,4 @@
 """Using filters (+ eventually edge detection) to try to get number boards.
-
-Based on https://github.com/Link009/LPEX
 """
 import math
 import os
@@ -88,23 +86,23 @@ cv2.imwrite(os.path.join(output_dir, f'1_{file_stem}_original.png'), img)
 
 # Transform to grey image
 hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-hue, saturation, value = cv2.split(hsv)
-# cv2.imshow('gray', value)
-cv2.imwrite(os.path.join(output_dir, f'2_{file_stem}_grey.png'), value)
+hue, saturation, greyscale = cv2.split(hsv)
+# cv2.imshow('gray', greyscale)
+cv2.imwrite(os.path.join(output_dir, f'2_{file_stem}_grey.png'), greyscale)
 
 # kernel to use for morphological operations
 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 
 # applying topHat/blackHat operations
-topHat = cv2.morphologyEx(value, cv2.MORPH_TOPHAT, kernel)
-blackHat = cv2.morphologyEx(value, cv2.MORPH_BLACKHAT, kernel)
+topHat = cv2.morphologyEx(greyscale, cv2.MORPH_TOPHAT, kernel)
+blackHat = cv2.morphologyEx(greyscale, cv2.MORPH_BLACKHAT, kernel)
 # cv2.imshow('topHat', topHat)
 # cv2.imshow('blackHat', blackHat)
 cv2.imwrite(os.path.join(output_dir, f'3_{file_stem}_topHat.png'), topHat)
 cv2.imwrite(os.path.join(output_dir, f'4_{file_stem}_blackHat.png'), blackHat)
 
 # add and subtract between morphological operations
-add = cv2.add(value, topHat)
+add = cv2.add(greyscale, topHat)
 subtract = cv2.subtract(add, blackHat)
 # cv2.imshow('subtract', subtract)
 cv2.imwrite(os.path.join(output_dir, f'5_{file_stem}_subtract.png'), subtract)
@@ -190,11 +188,21 @@ for group in char_groups:
     cv2.rectangle(image_contours, (x, y), (x + w - 1, y + h - 1), 255, 2)
 
 cv2.drawContours(image_contours, possible_chars, -1, (255, 255, 255))
-cv2.imshow('contour_groups', image_contours)
+# cv2.imshow('contour_groups', image_contours)
 cv2.imwrite(os.path.join(output_dir, f'10_{file_stem}_contour_groups.png'),
             image_contours)
 
-# TODO: Create images masked by each of these bounding boxes
-# TODO: Run OCR on masked images
+# Mask and crop each of the grouped regions
+# TODO add white outline to each image - bounding boxes are too tight
+for n, group in enumerate(char_groups):
+    cnts = [possible_chars[i] for i in group]
+    cnts = np.concatenate(cnts)
+    x, y, w, h = cv2.boundingRect(cnts)
+    cropped = greyscale[y:y + h, x:x + w]  # greyscale image
+    # number = pytesseract.image_to_string(cropped, config='--psm 11')
+    # print(f'Detected number for {n} is {number}')
+    # cv2.imshow(f'cropped_{n}', cropped)
+    cv2.imwrite(os.path.join(output_dir, f'11_{file_stem}_{n}_cropped.png'),
+                cropped)
 
 cv2.waitKey(0)
