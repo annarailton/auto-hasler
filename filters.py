@@ -8,6 +8,7 @@ import numpy as np
 
 import cv2
 import networkx as nx
+import pytesseract
 
 # =============
 # Magic numbers
@@ -199,10 +200,26 @@ for n, group in enumerate(char_groups):
     cnts = np.concatenate(cnts)
     x, y, w, h = cv2.boundingRect(cnts)
     cropped = greyscale[y:y + h, x:x + w]  # greyscale image
-    # number = pytesseract.image_to_string(cropped, config='--psm 11')
-    # print(f'Detected number for {n} is {number}')
-    # cv2.imshow(f'cropped_{n}', cropped)
-    cv2.imwrite(os.path.join(output_dir, f'11_{file_stem}_{n}_cropped.png'),
-                cropped)
+
+    # Add white border
+    top = int(0.05 * cropped.shape[0])
+    left = int(0.05 * cropped.shape[1])
+    cropped_with_border = cv2.copyMakeBorder(src=cropped,
+                                             top=top,
+                                             bottom=top,
+                                             left=left,
+                                             right=left,
+                                             borderType=cv2.BORDER_CONSTANT,
+                                             dst=None,
+                                             value=(255, 255, 255))
+    # OCR
+    target = pytesseract.image_to_string(
+        cropped_with_border,
+        config='--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789')
+    print(f'Detected number for {n} is {target}')
+    if target:
+        cv2.imshow(f'cropped_{n}_detected_{target}', cropped_with_border)
+    # cv2.imwrite(os.path.join(output_dir, f'11_{file_stem}_{n}_cropped.png'),
+    # cropped_with_border)
 
 cv2.waitKey(0)
