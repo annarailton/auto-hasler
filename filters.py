@@ -10,17 +10,6 @@ import cv2
 import networkx as nx
 import pytesseract
 
-# =============
-# Magic numbers
-# =============
-MIN_CONTOUR_ASPECT_RATIO = 0.15  # Careful around digit "1"
-MAX_CONTOUR_ASPECT_RATIO = 1
-MIN_CONTOUR_AREA = 30
-DELTA_ANGLE = 15  # Careful around skewed images
-DELTA_AREA = 1
-DELTA_WIDTH = 1
-DELTA_HEIGHT = 0.2  # Number characters vary more in width than height
-
 
 def calc_aspect_ratio(contour: np.ndarray) -> float:
     """Aspect ratio of a single contour"""
@@ -69,6 +58,19 @@ def calc_changes(cnt1: np.ndarray,
     return (delta_area, delta_width, delta_height)
 
 
+# =============
+# Magic numbers
+# =============
+MIN_CONTOUR_ASPECT_RATIO = 0.15  # Careful around digit "1"
+MAX_CONTOUR_ASPECT_RATIO = 1
+MIN_CONTOUR_AREA = 30
+DELTA_ANGLE = 15  # Careful around skewed images
+DELTA_AREA = 1
+DELTA_WIDTH = 1
+DELTA_HEIGHT = 0.2  # Number characters vary more in width than height
+
+debug = False
+
 output_dir = '/tmp/auto-hasler'
 os.makedirs(output_dir, exist_ok=True)
 
@@ -83,13 +85,14 @@ if not os.path.exists(img_loc):
 
 img = cv2.imread(img_loc)
 # img = cv2.resize(img, (620, 480))
-cv2.imwrite(os.path.join(output_dir, f'1_{file_stem}_original.png'), img)
+if debug:
+    cv2.imwrite(os.path.join(output_dir, f'1_{file_stem}_original.png'), img)
 
 # Transform to grey image
 hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 hue, saturation, greyscale = cv2.split(hsv)
-# cv2.imshow('gray', greyscale)
-cv2.imwrite(os.path.join(output_dir, f'2_{file_stem}_grey.png'), greyscale)
+if debug:
+    cv2.imwrite(os.path.join(output_dir, f'2_{file_stem}_grey.png'), greyscale)
 
 # kernel to use for morphological operations
 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
@@ -97,27 +100,28 @@ kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 # applying topHat/blackHat operations
 topHat = cv2.morphologyEx(greyscale, cv2.MORPH_TOPHAT, kernel)
 blackHat = cv2.morphologyEx(greyscale, cv2.MORPH_BLACKHAT, kernel)
-# cv2.imshow('topHat', topHat)
-# cv2.imshow('blackHat', blackHat)
-cv2.imwrite(os.path.join(output_dir, f'3_{file_stem}_topHat.png'), topHat)
-cv2.imwrite(os.path.join(output_dir, f'4_{file_stem}_blackHat.png'), blackHat)
+if debug:
+    cv2.imwrite(os.path.join(output_dir, f'3_{file_stem}_topHat.png'), topHat)
+    cv2.imwrite(os.path.join(output_dir, f'4_{file_stem}_blackHat.png'),
+                blackHat)
 
 # add and subtract between morphological operations
 add = cv2.add(greyscale, topHat)
 subtract = cv2.subtract(add, blackHat)
-# cv2.imshow('subtract', subtract)
-cv2.imwrite(os.path.join(output_dir, f'5_{file_stem}_subtract.png'), subtract)
+if debug:
+    cv2.imwrite(os.path.join(output_dir, f'5_{file_stem}_subtract.png'),
+                subtract)
 
 # # applying Gaussian blur on subtract image
 blur = cv2.GaussianBlur(subtract, (5, 5), 0)
-# cv2.imshow('blur', blur)
-cv2.imwrite(os.path.join(output_dir, f'6_{file_stem}_blur.png'), blur)
+if debug:
+    cv2.imwrite(os.path.join(output_dir, f'6_{file_stem}_blur.png'), blur)
 
 # thresholding
 thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                cv2.THRESH_BINARY_INV, 19, 9)
-# cv2.imshow('thresh', thresh)
-cv2.imwrite(os.path.join(output_dir, f'7_{file_stem}_thresh.png'), thresh)
+if debug:
+    cv2.imwrite(os.path.join(output_dir, f'7_{file_stem}_thresh.png'), thresh)
 
 # Check for contours on thresholded image
 contours, hierarchy = cv2.findContours(thresh, cv2.RETR_LIST,
@@ -131,8 +135,9 @@ image_contours = np.zeros((height, width, 3), dtype=np.uint8)
 possible_chars = []
 for i, contour in enumerate(contours):
 
-    # draw contours based on actual found contours of thresh image
-    cv2.drawContours(image_contours, contours, i, (255, 255, 255))
+    if debug:
+        # draw contours based on actual found contours of thresh image
+        cv2.drawContours(image_contours, contours, i, (255, 255, 255))
 
     if MIN_CONTOUR_ASPECT_RATIO < calc_aspect_ratio(
             contour  # noqa: C812
@@ -140,17 +145,17 @@ for i, contour in enumerate(contours):
             contour):
         possible_chars.append(contour)
 
-# cv2.imshow('contours', image_contours)
-cv2.imwrite(os.path.join(output_dir, f'8_{file_stem}_contours.png'),
-            image_contours)
+if debug:
+    cv2.imwrite(os.path.join(output_dir, f'8_{file_stem}_contours.png'),
+                image_contours)
 
 # Draw subset of contours
-image_contours = np.zeros((height, width, 3), np.uint8)
-cv2.drawContours(image_contours, possible_chars, -1, (255, 255, 255))
-# cv2.imshow('contoursPossibleChars', image_contours)
-cv2.imwrite(
-    os.path.join(output_dir, f'9_{file_stem}_contours_possible_chars.png'),
-    image_contours)
+if debug:
+    image_contours = np.zeros((height, width, 3), np.uint8)
+    cv2.drawContours(image_contours, possible_chars, -1, (255, 255, 255))
+    cv2.imwrite(
+        os.path.join(output_dir, f'9_{file_stem}_contours_possible_chars.png'),
+        image_contours)
 
 n_contours = len(possible_chars)
 matches = np.zeros((n_contours, n_contours), np.uint8)
@@ -182,19 +187,18 @@ for cc in nx.connected_components(graph):
         char_groups.append(cc)
 
 # Put a bounding box around the connected components
-for group in char_groups:
-    cnts = [possible_chars[i] for i in group]
-    cnts = np.concatenate(cnts)
-    x, y, w, h = cv2.boundingRect(cnts)
-    cv2.rectangle(image_contours, (x, y), (x + w - 1, y + h - 1), 255, 2)
+if debug:
+    for group in char_groups:
+        cnts = [possible_chars[i] for i in group]
+        cnts = np.concatenate(cnts)
+        x, y, w, h = cv2.boundingRect(cnts)
+        cv2.rectangle(image_contours, (x, y), (x + w - 1, y + h - 1), 255, 2)
 
-cv2.drawContours(image_contours, possible_chars, -1, (255, 255, 255))
-# cv2.imshow('contour_groups', image_contours)
-cv2.imwrite(os.path.join(output_dir, f'10_{file_stem}_contour_groups.png'),
-            image_contours)
+    cv2.drawContours(image_contours, possible_chars, -1, (255, 255, 255))
+    cv2.imwrite(os.path.join(output_dir, f'10_{file_stem}_contour_groups.png'),
+                image_contours)
 
 # Mask and crop each of the grouped regions
-# TODO add white outline to each image - bounding boxes are too tight
 for n, group in enumerate(char_groups):
     cnts = [possible_chars[i] for i in group]
     cnts = np.concatenate(cnts)
@@ -219,7 +223,10 @@ for n, group in enumerate(char_groups):
     print(f'Detected number for {n} is {target}')
     if target:
         cv2.imshow(f'cropped_{n}_detected_{target}', cropped_with_border)
-    # cv2.imwrite(os.path.join(output_dir, f'11_{file_stem}_{n}_cropped.png'),
-    # cropped_with_border)
+    if debug:
+        cv2.imwrite(
+            os.path.join(output_dir, f'11_{file_stem}_{n}_cropped.png'),
+            cropped_with_border)
 
 cv2.waitKey(0)
+cv2.destroyAllWindows()
