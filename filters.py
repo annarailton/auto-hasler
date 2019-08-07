@@ -85,29 +85,30 @@ if __name__ == '__main__':
         action='store_true',
     )
     args_parser.add_argument(
-        '--show-results',
-        help='show results images',
-        dest='show_results',
+        '--save-results',
+        help='save results image',
+        dest='save_results',
         action='store_true',
     )
 
     args_parser.set_defaults(debug=False)
-    args_parser.set_defaults(show_results=False)
+    args_parser.set_defaults(save_results=False)
     args = args_parser.parse_args()
 
     debug = args.debug
     img_loc = args.img_loc
-    show_results = args.show_results
+    save_results = args.save_results
 
     if not os.path.exists(img_loc):
         raise IOError(f'File {img_loc} does not exist')
 
-    img = cv2.imread(img_loc)
-    # img = cv2.resize(img, (620, 480))
-    if debug:
+    if debug or save_results:
         file_stem = os.path.splitext(os.path.basename(img_loc))[0]
         output_dir = os.path.join('/tmp/auto-hasler', file_stem)
         os.makedirs(output_dir, exist_ok=True)
+
+    img = cv2.imread(img_loc)
+    if debug:
         print(f'In debug mode: intermediate images written to {output_dir}')
         cv2.imwrite(os.path.join(output_dir, '1_original.png'), img)
 
@@ -249,13 +250,20 @@ if __name__ == '__main__':
             cv2.imwrite(
                 os.path.join(output_dir, f'11_{n}_detected_{target}.png'),
                 cropped_with_border)
-        if show_results:
-            print(f'Detected number for {n} is {target}')
-            if target:
-                cv2.imshow(f'cropped_{n}_detected_{target}',
-                           cropped_with_border)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        if save_results and target:
+            cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            cv2.putText(img=img,
+                        text=target,
+                        org=(x, y + 2 * h + 3),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=1,
+                        color=(255, 0, 0),
+                        thickness=2)
 
     print('Results in order (L -> R):')
     print(' '.join([results[k] for k in sorted(results.keys())]))
+
+    if save_results:
+        results_loc = os.path.join(output_dir, 'results.png')
+        cv2.imwrite(results_loc, img)
+        print(f'Results image written to {results_loc}')
