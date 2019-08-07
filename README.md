@@ -1,5 +1,5 @@
 # auto-hasler
-Associate competitor numbers and timings from finish line photos.
+Get competitor numbers and timings from finish line photos.
 
 ## Requirements
 
@@ -27,9 +27,12 @@ The `cv2.drawContours` call dominates the runtime of the `filters.py` script - t
 
 ## TODO
 
-* Get coordinate position of contour groups with a OCR result
-* For photos with multiple number boards, put them in order (L-R by default)
-* Add command line args (`--debug`, `--image`)
+* ~~Get coordinate position of contour groups with a OCR result~~
+* ~~For photos with multiple number boards, put them in order (L-R by default)~~
+* ~~Add command line args (`--debug`, `--image`)~~
+* Run with different filter values then collate the results
+* Be able to take in a list of expected numbers (*e.g.* race entries)
+* Use `tesseract` training to add new fonts (like the stencil font in [`multiple2.jpg`](img/multiple2.jpg))
 * Be able to process video
     - split up into sensible amount of frames
     - get timestamp info
