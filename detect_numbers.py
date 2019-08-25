@@ -150,8 +150,8 @@ if __name__ == '__main__':
 
     # applying Gaussian blur on subtract image
     # TODO adaptive blur (to image size)
-    # blur = cv.GaussianBlur(subtract, ksize=(3, 3), sigmaX=0)
-    blur = cv.GaussianBlur(subtract, ksize=(5, 5), sigmaX=0)
+    blur = cv.GaussianBlur(subtract, ksize=(3, 3), sigmaX=0)  # multiple3
+    # blur = cv.GaussianBlur(subtract, ksize=(5, 5), sigmaX=0)
     if debug:
         cv.imwrite(os.path.join(output_dir, '6_blur.png'), blur)
     # thresholding
@@ -208,7 +208,7 @@ if __name__ == '__main__':
             angle_between_centres = calc_angle_between_centres(cnt1, cnt2)
             delta_area, delta_width, delta_height = calc_changes(cnt1, cnt2)
 
-            if dist_between_centres < 5 * cnt1_diagonal and \
+            if dist_between_centres < 2 * cnt1_diagonal and \
                     angle_between_centres < DELTA_ANGLE and \
                     delta_area < DELTA_AREA and \
                     delta_width < DELTA_WIDTH and \
@@ -246,8 +246,9 @@ if __name__ == '__main__':
         cnts = [possible_chars[i] for i in group]
         cnts = np.concatenate(cnts)
         x, y, w, h = cv.boundingRect(cnts)
-        # cropped = greyscale[y:y + h, x:x + w]
-        cropped = img[y:y + h, x:x + w]  # TODO change which image used for OCR
+        # TODO change which image used for OCR
+        cropped = greyscale[y:y + h, x:x + w]  # multiple3
+        # cropped = img[y:y + h, x:x + w]  # multiple1
         centre_x_coord = x + w / 2
 
         # Add white border
